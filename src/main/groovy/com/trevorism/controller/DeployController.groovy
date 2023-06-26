@@ -1,12 +1,12 @@
 package com.trevorism.controller
 
+
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.trevorism.https.SecureHttpClient
 import com.trevorism.model.DataListContent
 import com.trevorism.model.DeployRequest
-import com.trevorism.model.RollbackRequest
-import com.trevorism.model.ServiceVersionInfo
+
 import com.trevorism.model.WorkflowRequest
 import com.trevorism.model.WorkflowResponse
 import com.trevorism.secure.Roles
@@ -16,7 +16,6 @@ import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
-import io.micronaut.http.annotation.Put
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.inject.Inject
@@ -43,24 +42,13 @@ class DeployController {
     @Operation(summary = "Deploys a service **Secure")
     @Post(value = "/", produces = MediaType.APPLICATION_JSON, consumes = MediaType.APPLICATION_JSON)
     @Secure(value = Roles.SYSTEM, allowInternal = true)
-    WorkflowResponse deploy(@Body DeployRequest request) {
+    DeployRequest deploy(@Body DeployRequest request) {
         String json = secureHttpClient.post("https://github.project.trevorism.com/repo/${request.serviceName}/workflow", gson.toJson(new WorkflowRequest()))
-        gson.fromJson(json, WorkflowResponse)
+        WorkflowResponse response = gson.fromJson(json, WorkflowResponse)
+        if(response.statusUrl.contains(request.serviceName)){
+            return request
+        }
+        throw new RuntimeException("Unable to deploy ${request.serviceName}")
     }
 
-    @Tag(name = "Deploy Operations")
-    @Operation(summary = "Get service available versions **Secure")
-    @Get(value = "/{name}", produces = MediaType.APPLICATION_JSON)
-    @Secure(value = Roles.SYSTEM, allowInternal = true)
-    ServiceVersionInfo getServiceVersionInfo(String name) {
-
-    }
-
-    @Tag(name = "Deploy Operations")
-    @Operation(summary = "Rollback to specified version **Secure")
-    @Put(value = "/", produces = MediaType.APPLICATION_JSON, consumes = MediaType.APPLICATION_JSON)
-    @Secure(value = Roles.SYSTEM, allowInternal = true)
-    RollbackRequest rollback(@Body RollbackRequest rollbackRequest) {
-
-    }
 }
