@@ -9,8 +9,9 @@ class RootControllerTest {
 
     @Test
     void testRootControllerEndpoints(){
+        println System.getProperty("projectName")
         RootController rootController = new RootController()
-        assert rootController.index().getBody().get().join(";").contains("/help")
+        assert rootController.index().getBody().get().contains("/help")
     }
 
     @Test
