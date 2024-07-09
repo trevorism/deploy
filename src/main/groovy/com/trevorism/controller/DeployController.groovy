@@ -1,6 +1,5 @@
 package com.trevorism.controller
 
-
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.trevorism.https.SecureHttpClient
@@ -23,7 +22,7 @@ import jakarta.inject.Inject
 @Controller("/deploy")
 class DeployController {
 
-    private final Gson gson = (new GsonBuilder()).setDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").create()
+    private final Gson gson = new GsonBuilder().disableHtmlEscaping().setDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'").create()
 
     @Inject
     SecureHttpClient secureHttpClient
