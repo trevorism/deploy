@@ -1,4 +1,4 @@
-runtime: java17
+runtime: java25
 service: deploy
 entrypoint: java -jar deploy-all.jar
 handlers:
