@@ -161,6 +161,7 @@ jobs:
           ACCEPTANCE_BASE_URL: ${{ steps.deploy_candidate.outputs.version_url }}
 
       - name: 'Cut over: migrate all traffic to candidate'
+        if: github.event_name != 'pull_request'
         run: |
           gcloud app services set-traffic "${SERVICE_NAME}" \
             --splits="${{ steps.deploy_candidate.outputs.version_id }}=1" \
@@ -168,10 +169,12 @@ jobs:
             --project="${GCP_PROJECT}"
 
       - name: Get current time
+        if: github.event_name != 'pull_request'
         uses: josStorer/get-current-time@v2
         id: current-time
 
       - name: Send deploy event
+        if: github.event_name != 'pull_request'
         uses: dkershner6/post-api-call-action@v2
         with:
           url: "https://event.data.trevorism.com/event/deploy"
