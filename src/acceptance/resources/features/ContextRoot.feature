@@ -10,3 +10,8 @@ Feature: Context Root of this API
     Given the application is alive
     When I ping the application
     Then pong is returned, to indicate the service is alive
+
+  Scenario: Version reports the deployed build
+    Given the application is alive
+    When I request the version
+    Then the version returned is "0-4-0"

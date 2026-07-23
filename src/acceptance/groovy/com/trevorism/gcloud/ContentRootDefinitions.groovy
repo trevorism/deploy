@@ -11,6 +11,7 @@ String baseUrl = (System.getenv("ACCEPTANCE_BASE_URL") ?: "https://deploy.projec
 
 def contextRootContent
 def pingContent
+def versionContent
 
 Given(~/^the application is alive$/) { ->
     try{
@@ -37,4 +38,12 @@ When(~/^I ping the application$/) { ->
 
 Then(~/^pong is returned, to indicate the service is alive$/) { ->
     assert pingContent == "pong"
+}
+
+When(~/^I request the version$/) { ->
+    versionContent = new URL("${baseUrl}/version").text
+}
+
+Then(~/^the version returned is "([^"]*)"$/) { String expectedVersion ->
+    assert versionContent == expectedVersion
 }
