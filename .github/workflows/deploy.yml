@@ -3,31 +3,176 @@ name: Deploy tested project to GCP
 on:
   push:
     branches: [ master ]
+  pull_request:
+    branches: [ master ]
+    types: [ opened, synchronize, reopened, closed ]
   workflow_dispatch:
 
 permissions: write-all
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GCP_PROJECT: 'trevorism-project'
+  GCP_PROJECT_ID: '51970111147'
+  SERVICE_NAME: 'deploy'
+  KEEP_VERSIONS: '3'
+
 jobs:
-  call-build:
-    uses: trevorism/actions-workflows/.github/workflows/build.yml@master
-    with:
-      JDK_VERSION: 25
+  build:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
 
-  call-deploy:
-    uses: trevorism/actions-workflows/.github/workflows/deploy.yml@master
-    needs: [call-build]
-    with:
-      JDK_VERSION: 25
-      gcp_project: 'trevorism-project'
-      gcp_project_id: '51970111147'
-      version: '0-4-0'
-    secrets:
-      CLIENT_ID: ${{ secrets.CLIENT_ID }}
-      CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-      SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.2.0
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'gradle'
 
-  call-accept-after:
-    uses: trevorism/actions-workflows/.github/workflows/accept.yml@master
-    needs: call-deploy
-    with:
-      JDK_VERSION: 25
+      - name: Chmod gradlew
+        run: chmod +x ./gradlew
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.1.0
+
+      - name: Execute Gradle build
+        run: ./gradlew clean build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: JUnit Report Action
+        uses: mikepenz/action-junit-report@v6.4.1
+        if: always()
+        with:
+          report_paths: '**/build/test-results/test/TEST-*.xml'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-gated:
+    needs: [build]
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+
+      - name: Compute candidate version
+        id: vars
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "version=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0-4-0-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v5.2.0
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Chmod gradlew
+        run: chmod +x ./gradlew
+
+      - name: Auth with google
+        uses: 'google-github-actions/auth@v3'
+        with:
+          service_account: 'github-trevorism-project@trevorism-project.iam.gserviceaccount.com'
+          workload_identity_provider: 'projects/51970111147/locations/global/workloadIdentityPools/github-trevorism-project-pool/providers/trevorism-project-provider'
+
+      - name: Set up Cloud SDK
+        uses: 'google-github-actions/setup-gcloud@v3'
+
+      - name: Create directory
+        shell: bash
+        run: mkdir -p ./src/main/resources
+
+      - name: Create secrets file
+        uses: Amadevus/pwsh-script@v2
+        id: script
+        with:
+          # Written to main/resources so they are baked into the candidate jar AND
+          # picked up by the acceptance run via the main source set output.
+          script: |
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'clientId=${{ secrets.CLIENT_ID }}'
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'clientSecret=${{ secrets.CLIENT_SECRET }}'
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'signingKey=${{ secrets.SIGNING_KEY }}'
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'token=${{ secrets.TOKEN }}'
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'accessToken=${{ secrets.ACCESS_TOKEN }}'
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'apiKey=${{ secrets.API_KEY }}'
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'apiSecret=${{ secrets.API_SECRET }}'
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'apiSecret2=${{ secrets.API_SECRET_2 }}'
+            Add-Content -Path .\src\main\resources\secrets.properties -Value 'encryptionKey=${{ secrets.ENCRYPTION_KEY }}'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.1.0
+
+      - name: Stage the candidate app
+        run: ./gradlew clean appengineStage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 'Deploy candidate version (no promote)'
+        id: deploy_candidate
+        uses: 'google-github-actions/deploy-appengine@v3.0.1'
+        with:
+          working_directory: "build/staged-app"
+          deliverables: 'app.yaml'
+          promote: false
+          version: ${{ steps.vars.outputs.version }}
+
+      - name: Report candidate URL
+        run: |
+          echo "Candidate version: ${{ steps.deploy_candidate.outputs.version_id }}"
+          echo "Candidate URL:     ${{ steps.deploy_candidate.outputs.version_url }}"
+
+      - name: Comment candidate URL on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          CANDIDATE_URL: ${{ steps.deploy_candidate.outputs.version_url }}
+          CANDIDATE_VERSION: ${{ steps.deploy_candidate.outputs.version_id }}
+        with:
+          script: |
+            const marker = '<!-- pr-candidate-deploy -->';
+            const body = `${marker}\n🚀 **PR candidate deployed** (hidden — no live traffic)\n\n`
+              + `- Version: \`${process.env.CANDIDATE_VERSION}\`\n`
+              + `- Test it here: ${process.env.CANDIDATE_URL}\n\n`
+              + `Merging this PR will deploy + promote to live.`;
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: 'Acceptance gate against candidate'
+        run: ./gradlew clean acceptance
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACCEPTANCE_BASE_URL: ${{ steps.deploy_candidate.outputs.version_url }}
+
+      - name: 'Cut over: migrate all traffic to candidate'
+        run: |
+          gcloud app services set-traffic "${SERVICE_NAME}" \
+            --splits="${{ steps.deploy_candidate.outputs.version_id }}=1" \
+            --quiet \
+            --project="${GCP_PROJECT}"
+
+      - name: Get current time
+        uses: josStorer/get-current-time@v2
+        id: current-time
+
+      - name: Send deploy event
+        uses: dkershner6/post-api-call-action@v2
+        with:
+          url: "https://event.data.trevorism.com/event/deploy"
+          data: "{\"service\":\"${{ github.event.repository.name }}\",\"gcpProject\":\"${{ env.GCP_PROJECT }}\",\"version\":\"${{ steps.deploy_candidate.outputs.version_id }}\", \"date\":\"${{ steps.current-time.outputs.time }}\"}"

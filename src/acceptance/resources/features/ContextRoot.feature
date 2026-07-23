@@ -3,11 +3,10 @@ Feature: Context Root of this API
 
   Scenario: Root of the API HTTPS
     Given the application is alive
-    When I navigate to "https://deploy.project.trevorism.com"
+    When I navigate to the application root
     Then then a link to the help page is displayed
 
   Scenario: Ping HTTPS
     Given the application is alive
-    When I ping the application deployed to "https://deploy.project.trevorism.com"
+    When I ping the application
     Then pong is returned, to indicate the service is alive
-
