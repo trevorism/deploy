@@ -14,4 +14,4 @@ Feature: Context Root of this API
   Scenario: Version reports the deployed build
     Given the application is alive
     When I request the version
-    Then the version returned is "0-5-0"
+    Then the version returned is "0-4-0"
