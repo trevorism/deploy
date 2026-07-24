@@ -66,7 +66,7 @@ jobs:
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "version=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
           else
-            echo "version=0-4-0-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            echo "version=0-5-0-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set up JDK 25
@@ -140,7 +140,7 @@ jobs:
         with:
           script: |
             const marker = '<!-- pr-candidate-deploy -->';
-            const body = `${marker}\n🚀 **PR candidate deployed** (hidden — no live traffic)\n\n`
+            const body = `${marker}\n **PR candidate deployed** (hidden — no live traffic)\n\n`
               + `- Version: \`${process.env.CANDIDATE_VERSION}\`\n`
               + `- Test it here: ${process.env.CANDIDATE_URL}\n\n`
               + `Merging this PR will deploy + promote to live.`;
