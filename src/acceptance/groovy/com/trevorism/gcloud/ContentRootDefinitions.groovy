@@ -7,8 +7,7 @@ package com.trevorism.gcloud
 this.metaClass.mixin(io.cucumber.groovy.Hooks)
 this.metaClass.mixin(io.cucumber.groovy.EN)
 
-String baseUrl = (System.getenv("ACCEPTANCE_BASE_URL") ?: "https://deploy.project.trevorism.com").replaceAll("/\$", "")
-
+String baseUrl = System.getenv("ACCEPTANCE_BASE_URL") ?: "https://deploy.project.trevorism.com"
 def contextRootContent
 def pingContent
 def versionContent

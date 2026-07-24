@@ -3,63 +3,23 @@ name: Deploy tested project to GCP
 on:
   push:
     branches: [ master ]
-
   pull_request:
     branches: [ master ]
     types: [ opened, synchronize, reopened, closed ]
   workflow_dispatch:
 
-permissions: write-all
-
-env:
-  VERSION: '0-5-0'
-
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+  checks: write
+  pull-requests: write
 
 jobs:
-  vars:
-    if: github.event.action != 'closed'
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.resolve.outputs.version }}
-    steps:
-      - id: resolve
-        run: echo "version=${{ env.VERSION }}" >> "$GITHUB_OUTPUT"
-
-  build:
-    if: github.event.action != 'closed'
-    uses: trevorism/actions-workflows/.github/workflows/build.yml@master
-    with:
-      JDK_VERSION: 25
-
-  deploy:
-    needs: [build, vars]
-    if: github.event.action != 'closed'
-    uses: trevorism/actions-workflows/.github/workflows/deploy.yml@master
-    with:
-      JDK_VERSION: 25
-      gcp_project: 'trevorism-project'
-      gcp_project_id: '51970111147'
-      version: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || needs.vars.outputs.version }}
-      promote: ${{ github.event_name != 'pull_request' }}
-    secrets: inherit
-
-  test:
-    needs: [deploy]
-    if: github.event.action != 'closed'
-    uses: trevorism/actions-workflows/.github/workflows/accept.yml@master
-    with:
-      JDK_VERSION: 25
-      base_url: ${{ github.event_name == 'pull_request' && needs.deploy.outputs.version_url || '' }}
-    secrets: inherit
-
-  cleanup-pr:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    uses: trevorism/actions-workflows/.github/workflows/cleanup-pr.yml@master
+  pipeline:
+    uses: trevorism/actions-workflows/.github/workflows/pipeline.yml@master
     with:
       gcp_project: 'trevorism-project'
       gcp_project_id: '51970111147'
-      version: ${{ format('pr-{0}', github.event.pull_request.number) }}
+      version: '0-5-0'
     secrets: inherit
