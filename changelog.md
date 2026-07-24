@@ -1,3 +1,7 @@
+## 0.5.0
+
+New deploy workflows.
+
 ## 0.4.0
 
 Upgrade to java 25, micronaut 5. Update dependencies.
