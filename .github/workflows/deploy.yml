@@ -3,10 +3,7 @@ name: Deploy tested project to GCP
 on:
   push:
     branches: [ master ]
-  # Opening/updating a PR deploys a hidden pr-<n> App Engine version and runs the
-  # acceptance suite against it, so the PR can be tested before merge. Merge to
-  # master deploys + promotes the release version. Purely additive to the standard
-  # build -> deploy -> test composition.
+
   pull_request:
     branches: [ master ]
     types: [ opened, synchronize, reopened, closed ]
@@ -14,12 +11,23 @@ on:
 
 permissions: write-all
 
-# Cancel superseded PR runs; never cancel a master deploy.
+env:
+  VERSION: '0-5-0'
+
 concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  vars:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - id: resolve
+        run: echo "version=${{ env.VERSION }}" >> "$GITHUB_OUTPUT"
+
   build:
     if: github.event.action != 'closed'
     uses: trevorism/actions-workflows/.github/workflows/build.yml@master
@@ -27,15 +35,14 @@ jobs:
       JDK_VERSION: 25
 
   deploy:
-    needs: [build]
+    needs: [build, vars]
     if: github.event.action != 'closed'
     uses: trevorism/actions-workflows/.github/workflows/deploy.yml@master
     with:
       JDK_VERSION: 25
       gcp_project: 'trevorism-project'
       gcp_project_id: '51970111147'
-      # Master deploys the clean release version verbatim; PRs get a hidden pr-<n> env.
-      version: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || '0-5-0' }}
+      version: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || needs.vars.outputs.version }}
       promote: ${{ github.event_name != 'pull_request' }}
     secrets: inherit
 
@@ -45,7 +52,6 @@ jobs:
     uses: trevorism/actions-workflows/.github/workflows/accept.yml@master
     with:
       JDK_VERSION: 25
-      # On PRs, test the hidden candidate URL; on master, empty -> the glue falls back to prod.
       base_url: ${{ github.event_name == 'pull_request' && needs.deploy.outputs.version_url || '' }}
     secrets: inherit
 
