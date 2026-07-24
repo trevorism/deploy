@@ -7,21 +7,24 @@ package com.trevorism.gcloud
 this.metaClass.mixin(io.cucumber.groovy.Hooks)
 this.metaClass.mixin(io.cucumber.groovy.EN)
 
+String baseUrl = (System.getenv("ACCEPTANCE_BASE_URL") ?: "https://deploy.project.trevorism.com").replaceAll("/\$", "")
+
 def contextRootContent
 def pingContent
+def versionContent
 
 Given(~/^the application is alive$/) { ->
     try{
-        new URL("https://deploy.project.trevorism.com/ping").text
+        new URL("${baseUrl}/ping").text
     }
     catch (Exception ignored){
         Thread.sleep(10000)
-        new URL("https://deploy.project.trevorism.com/ping").text
+        new URL("${baseUrl}/ping").text
     }
 }
 
-When(~/^I navigate to "([^"]*)"$/) { String url ->
-    contextRootContent = new URL(url).text
+When(~/^I navigate to the application root$/) { ->
+    contextRootContent = new URL(baseUrl).text
 }
 
 Then(~/^then a link to the help page is displayed$/) { ->
@@ -29,10 +32,18 @@ Then(~/^then a link to the help page is displayed$/) { ->
     assert contextRootContent.contains("/help")
 }
 
-When(~/^I ping the application deployed to "([^"]*)"$/) { String url ->
-    pingContent = new URL("${url}/ping").text
+When(~/^I ping the application$/) { ->
+    pingContent = new URL("${baseUrl}/ping").text
 }
 
 Then(~/^pong is returned, to indicate the service is alive$/) { ->
     assert pingContent == "pong"
+}
+
+When(~/^I request the version$/) { ->
+    versionContent = new URL("${baseUrl}/version").text
+}
+
+Then(~/^the version returned is "([^"]*)"$/) { String expectedVersion ->
+    assert versionContent == expectedVersion
 }
