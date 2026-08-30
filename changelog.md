@@ -1,3 +1,9 @@
+## 0.6.0
+
+Adopt the versioning plugin (single-source `appVersion`), bump dependencies to latest
+floors (micronaut 5.1.0, micronaut-utility-beans 2.1.0), and align with the latest
+service template.
+
 ## 0.5.0
 
 New deploy workflows.

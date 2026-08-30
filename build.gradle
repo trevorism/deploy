@@ -14,10 +14,15 @@ buildscript {
             url uri("https://maven.pkg.github.com/trevorism/gradle-acceptance-plugin")
             credentials creds
         }
+        maven {
+            url uri("https://maven.pkg.github.com/trevorism/gradle-trevorism-versioning-plugin")
+            credentials creds
+        }
     }
     dependencies {
         classpath 'com.google.cloud.tools:appengine-gradle-plugin:2.8.7'
         classpath 'com.trevorism:gradle-acceptance-plugin:3.0.0'
+        classpath 'com.trevorism:gradle-trevorism-versioning-plugin:1.0.0'
     }
 }
 
@@ -30,6 +35,7 @@ plugins {
 
 apply plugin: 'com.google.cloud.tools.appengine'
 apply plugin: "com.trevorism.gradle.acceptance"
+apply plugin: "com.trevorism.gradle.versioning"
 
 group = "com.trevorism"
 
@@ -59,7 +65,7 @@ dependencies {
 
     runtimeOnly("ch.qos.logback:logback-classic")
 
-    implementation 'com.trevorism:micronaut-utility-beans:2.0.0'
+    implementation 'com.trevorism:micronaut-utility-beans:2.1.0'
     implementation 'com.google.code.gson:gson:2.14.0'
     implementation 'com.google.cloud:google-cloud-appengine-admin:2.92.0'
 
@@ -90,7 +96,6 @@ appengine {
     stage.artifact = layout.buildDirectory.file("libs/${project.name}-all.jar")
     deploy {
         projectId = "trevorism-project"
-        version = "0-5-0"
         stopPreviousVersion = true
         promote = true
     }
