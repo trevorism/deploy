@@ -10,7 +10,7 @@ import io.swagger.v3.oas.annotations.info.Info
         info = @Info(
                 title = "Deploy",
                 version = AppVersion.SEMVER,
-                description = "Deploy of Trevorism",
+                description = "API based deploys on Trevorism",
                 contact = @Contact(url = "https://trevorism.com", name = "Trevor Brooks", email = "tbrooks@trevorism.com")
         )
 )
