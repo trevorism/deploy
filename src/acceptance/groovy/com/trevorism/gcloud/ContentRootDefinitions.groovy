@@ -38,11 +38,3 @@ When(~/^I ping the application$/) { ->
 Then(~/^pong is returned, to indicate the service is alive$/) { ->
     assert pingContent == "pong"
 }
-
-When(~/^I request the version$/) { ->
-    versionContent = new URL("${baseUrl}/version").text
-}
-
-Then(~/^the version returned is "([^"]*)"$/) { String expectedVersion ->
-    assert versionContent == expectedVersion
-}
