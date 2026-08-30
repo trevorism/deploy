@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.info.Info
 
 @OpenAPIDefinition(
         info = @Info(
-                title = "Deploy",
+                title = "Deploy API",
                 version = AppVersion.SEMVER,
                 description = "API based deploys on Trevorism",
                 contact = @Contact(url = "https://trevorism.com", name = "Trevor Brooks", email = "tbrooks@trevorism.com")
