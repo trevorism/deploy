@@ -17,6 +17,17 @@ class DeployControllerTest {
     }
 
     @Test
+    void testListReadsTheDataStandardSurface() {
+        String requested = null
+        DeployController deployController = new DeployController()
+        deployController.secureHttpClient = [get: { url -> requested = url; '{data: ["one"]}' }] as SecureHttpClient
+
+        deployController.list()
+
+        assert requested == "https://list.data.trevorism.com/object/6553743902375936/content"
+    }
+
+    @Test
     void testDeploy() {
         DeployController deployController = new DeployController()
         deployController.secureHttpClient = [post: { url, x -> '{statusUrl: "test"}' }] as SecureHttpClient

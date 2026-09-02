@@ -32,7 +32,7 @@ class DeployController {
     @Get(value = "/", produces = MediaType.APPLICATION_JSON)
     @Secure(Roles.SYSTEM)
     List<String> list() {
-        String response = secureHttpClient.get("https://list.data.trevorism.com/api/6553743902375936/content")
+        String response = secureHttpClient.get("https://list.data.trevorism.com/object/6553743902375936/content")
         DataListContent content = gson.fromJson(response, DataListContent)
         return content.data
     }
